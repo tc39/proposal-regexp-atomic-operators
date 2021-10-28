@@ -137,6 +137,11 @@ See https://github.com/rbuckton/proposal-regexp-x-mode for more information on t
 * [Title](url)   -->
 <!--#endregion:references-->
 
+# History
+
+- October 28, 2021 &mdash; Proposed for Stage 1 ([slides](https://1drv.ms/p/s!AjgWTO11Fk-TkfoUE-yb6OHZGaPtvw?e=mJQWJ8))
+  - Outcome: Remained at Stage 0
+
 <!--#region:todo-->
 # TODO
 
