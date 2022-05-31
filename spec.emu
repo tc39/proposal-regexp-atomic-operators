@@ -1,0 +1,1014 @@
+<!doctype html>
+<meta charset="utf8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
+<link rel="spec" href="es2015" />
+<pre class="metadata">
+title: Regular Expression Atomic Operators for ECMAScript
+stage: 0
+contributors: Ron Buckton, Ecma International
+</pre>
+
+<emu-biblio href="node_modules/@tc39/ecma262-biblio/biblio.json"></emu-biblio>
+
+<emu-intro id="sec-intro">
+  <h1>Introduction</h1>
+  <p>Forthcoming</p>
+  <p>See <a href="https://github.com/rbuckton/proposal-regexp-atomic-operators#readme">the proposal repository</a> for background material and discussion.</p>
+</emu-intro>
+
+<emu-clause id="sec-text-processing">
+  <h1>Text Processing</h1>
+
+  <emu-clause id="sec-regexp-regular-expression-objects">
+    <h1>RegExp (Regular Expression) Objects</h1>
+
+    <emu-clause id="sec-patterns">
+      <h1>Patterns</h1>
+      <p>The RegExp constructor applies the following grammar to the input pattern String. An error occurs if the grammar cannot interpret the String as an expansion of |Pattern|.</p>
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        Pattern[UnicodeMode, N] ::
+          Disjunction[?UnicodeMode, ?N]
+
+        Disjunction[UnicodeMode, N] ::
+          Alternative[?UnicodeMode, ?N]
+          Alternative[?UnicodeMode, ?N] `|` Disjunction[?UnicodeMode, ?N]
+
+        Alternative[UnicodeMode, N] ::
+          [empty]
+          Alternative[?UnicodeMode, ?N] Term[?UnicodeMode, ?N]
+
+        Term[UnicodeMode, N] ::
+          Assertion[?UnicodeMode, ?N]
+          Atom[?UnicodeMode, ?N]
+          Atom[?UnicodeMode, ?N] Quantifier
+
+        Assertion[UnicodeMode, N] ::
+          `^`
+          `$`
+          `\` `b`
+          `\` `B`
+          `(` `?` `=` Disjunction[?UnicodeMode, ?N] `)`
+          `(` `?` `!` Disjunction[?UnicodeMode, ?N] `)`
+          `(` `?` `&lt;=` Disjunction[?UnicodeMode, ?N] `)`
+          `(` `?` `&lt;!` Disjunction[?UnicodeMode, ?N] `)`
+
+        Quantifier ::
+          QuantifierPrefix
+          QuantifierPrefix `?`
+          <ins>QuantifierPrefix `+`</ins>
+
+        QuantifierPrefix ::
+          `*`
+          `+`
+          `?`
+          `{` DecimalDigits[~Sep] `}`
+          `{` DecimalDigits[~Sep] `,` `}`
+          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
+
+        Atom[UnicodeMode, N] ::
+          PatternCharacter
+          `.`
+          `\` AtomEscape[?UnicodeMode, ?N]
+          CharacterClass[?UnicodeMode]
+          `(` GroupSpecifier[?UnicodeMode]? Disjunction[?UnicodeMode, ?N] `)`
+          `(` `?` `:` Disjunction[?UnicodeMode, ?N] `)`
+          <ins>`(` `?` `>` Disjunction[?UnicodeMode, ?N] `)`
+
+        SyntaxCharacter :: one of
+          `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|`
+
+        PatternCharacter ::
+          SourceCharacter but not SyntaxCharacter
+
+        AtomEscape[UnicodeMode, N] ::
+          DecimalEscape
+          CharacterClassEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode]
+          [+N] `k` GroupName[?UnicodeMode]
+
+        CharacterEscape[UnicodeMode] ::
+          ControlEscape
+          `c` ControlLetter
+          `0` [lookahead &notin; DecimalDigit]
+          HexEscapeSequence
+          RegExpUnicodeEscapeSequence[?UnicodeMode]
+          IdentityEscape[?UnicodeMode]
+
+        ControlEscape :: one of
+          `f` `n` `r` `t` `v`
+
+        // emu-format ignore
+        ControlLetter :: one of
+          `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m` `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
+          `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M` `N` `O` `P` `Q` `R` `S` `T` `U` `V` `W` `X` `Y` `Z`
+
+        GroupSpecifier[UnicodeMode] ::
+          `?` GroupName[?UnicodeMode]
+
+        GroupName[UnicodeMode] ::
+          `&lt;` RegExpIdentifierName[?UnicodeMode] `&gt;`
+
+        RegExpIdentifierName[UnicodeMode] ::
+          RegExpIdentifierStart[?UnicodeMode]
+          RegExpIdentifierName[?UnicodeMode] RegExpIdentifierPart[?UnicodeMode]
+
+        RegExpIdentifierStart[UnicodeMode] ::
+          IdentifierStartChar
+          `\` RegExpUnicodeEscapeSequence[+UnicodeMode]
+          [~UnicodeMode] UnicodeLeadSurrogate UnicodeTrailSurrogate
+
+        RegExpIdentifierPart[UnicodeMode] ::
+          IdentifierPartChar
+          `\` RegExpUnicodeEscapeSequence[+UnicodeMode]
+          [~UnicodeMode] UnicodeLeadSurrogate UnicodeTrailSurrogate
+
+        RegExpUnicodeEscapeSequence[UnicodeMode] ::
+          [+UnicodeMode] `u` HexLeadSurrogate `\u` HexTrailSurrogate
+          [+UnicodeMode] `u` HexLeadSurrogate
+          [+UnicodeMode] `u` HexTrailSurrogate
+          [+UnicodeMode] `u` HexNonSurrogate
+          [~UnicodeMode] `u` Hex4Digits
+          [+UnicodeMode] `u{` CodePoint `}`
+
+        UnicodeLeadSurrogate ::
+          &gt; any Unicode code point in the inclusive range 0xD800 to 0xDBFF
+
+        UnicodeTrailSurrogate ::
+          &gt; any Unicode code point in the inclusive range 0xDC00 to 0xDFFF
+      </emu-grammar>
+      <p>Each `\\u` |HexTrailSurrogate| for which the choice of associated `u` |HexLeadSurrogate| is ambiguous shall be associated with the nearest possible `u` |HexLeadSurrogate| that would otherwise have no corresponding `\\u` |HexTrailSurrogate|.</p>
+      <emu-grammar type="definition">
+        HexLeadSurrogate ::
+          Hex4Digits [> but only if the MV of |Hex4Digits| is in the inclusive range 0xD800 to 0xDBFF]
+
+        HexTrailSurrogate ::
+          Hex4Digits [> but only if the MV of |Hex4Digits| is in the inclusive range 0xDC00 to 0xDFFF]
+
+        HexNonSurrogate ::
+          Hex4Digits [> but only if the MV of |Hex4Digits| is not in the inclusive range 0xD800 to 0xDFFF]
+
+        IdentityEscape[UnicodeMode] ::
+          [+UnicodeMode] SyntaxCharacter
+          [+UnicodeMode] `/`
+          [~UnicodeMode] SourceCharacter but not UnicodeIDContinue
+
+        DecimalEscape ::
+          NonZeroDigit DecimalDigits[~Sep]? [lookahead &notin; DecimalDigit]
+
+        CharacterClassEscape[UnicodeMode] ::
+          `d`
+          `D`
+          `s`
+          `S`
+          `w`
+          `W`
+          [+UnicodeMode] `p{` UnicodePropertyValueExpression `}`
+          [+UnicodeMode] `P{` UnicodePropertyValueExpression `}`
+
+        UnicodePropertyValueExpression ::
+          UnicodePropertyName `=` UnicodePropertyValue
+          LoneUnicodePropertyNameOrValue
+
+        UnicodePropertyName ::
+          UnicodePropertyNameCharacters
+
+        UnicodePropertyNameCharacters ::
+          UnicodePropertyNameCharacter UnicodePropertyNameCharacters?
+
+        UnicodePropertyValue ::
+          UnicodePropertyValueCharacters
+
+        LoneUnicodePropertyNameOrValue ::
+          UnicodePropertyValueCharacters
+
+        UnicodePropertyValueCharacters ::
+          UnicodePropertyValueCharacter UnicodePropertyValueCharacters?
+
+        UnicodePropertyValueCharacter ::
+          UnicodePropertyNameCharacter
+          DecimalDigit
+
+        UnicodePropertyNameCharacter ::
+          ControlLetter
+          `_`
+
+        CharacterClass[UnicodeMode] ::
+          `[` [lookahead != `^`] ClassRanges[?UnicodeMode] `]`
+          `[` `^` ClassRanges[?UnicodeMode] `]`
+
+        ClassRanges[UnicodeMode] ::
+          [empty]
+          NonemptyClassRanges[?UnicodeMode]
+
+        NonemptyClassRanges[UnicodeMode] ::
+          ClassAtom[?UnicodeMode]
+          ClassAtom[?UnicodeMode] NonemptyClassRangesNoDash[?UnicodeMode]
+          ClassAtom[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassRanges[?UnicodeMode]
+
+        NonemptyClassRangesNoDash[UnicodeMode] ::
+          ClassAtom[?UnicodeMode]
+          ClassAtomNoDash[?UnicodeMode] NonemptyClassRangesNoDash[?UnicodeMode]
+          ClassAtomNoDash[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassRanges[?UnicodeMode]
+
+        ClassAtom[UnicodeMode] ::
+          `-`
+          ClassAtomNoDash[?UnicodeMode]
+
+        ClassAtomNoDash[UnicodeMode] ::
+          SourceCharacter but not one of `\` or `]` or `-`
+          `\` ClassEscape[?UnicodeMode]
+
+        ClassEscape[UnicodeMode] ::
+          `b`
+          [+UnicodeMode] `-`
+          CharacterClassEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode]
+      </emu-grammar>
+
+      <emu-note>
+        <p>A number of productions in this section are given alternative definitions in section <emu-xref href="#sec-regular-expressions-patterns"></emu-xref>.</p>
+      </emu-note>
+
+      <emu-clause id="sec-patterns-static-semantics-early-errors">
+        <h1>Static Semantics: Early Errors</h1>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-patterns-static-semantics-early-errors-annexb"></emu-xref>.</p>
+        </emu-note>
+        <emu-grammar>Pattern :: Disjunction</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if CountLeftCapturingParensWithin(|Pattern|) &ge; 2<sup>32</sup> - 1.
+          </li>
+          <li>
+            It is a Syntax Error if |Pattern| contains two or more |GroupSpecifier|s for which CapturingGroupName of |GroupSpecifier| is the same.
+          </li>
+        </ul>
+        <ins class="block">
+        <emu-grammar>Quantifier :: QuantifierPrefix `+`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if |QuantifierPrefix| is an instance of the production <emu-grammar>QuantifierPrefix :: `{` DecimalDigits `}`</emu-grammar>.
+          </li>
+        </ul>
+        </ins>
+        <emu-grammar>QuantifierPrefix :: `{` DecimalDigits `,` DecimalDigits `}`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the MV of the first |DecimalDigits| is larger than the MV of the second |DecimalDigits|.
+          </li>
+        </ul>
+        <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if GroupSpecifiersThatMatch(|GroupName|) is empty.
+          </li>
+        </ul>
+        <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is larger than CountLeftCapturingParensWithin(the |Pattern| containing |AtomEscape|).
+          </li>
+        </ul>
+        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true*.
+          </li>
+          <li>
+            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *false* and IsCharacterClass of the second |ClassAtom| is *false* and the CharacterValue of the first |ClassAtom| is larger than the CharacterValue of the second |ClassAtom|.
+          </li>
+        </ul>
+        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true*.
+          </li>
+          <li>
+            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *false* and IsCharacterClass of |ClassAtom| is *false* and the CharacterValue of |ClassAtomNoDash| is larger than the CharacterValue of |ClassAtom|.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierStart :: `\` RegExpUnicodeEscapeSequence</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is not the numeric value of some code point matched by the |IdentifierStartChar| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierStart :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if RegExpIdentifierCodePoint of |RegExpIdentifierStart| is not matched by the |UnicodeIDStart| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierPart :: `\` RegExpUnicodeEscapeSequence</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is not the numeric value of some code point matched by the |IdentifierPartChar| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierPart :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if RegExpIdentifierCodePoint of |RegExpIdentifierPart| is not matched by the |UnicodeIDContinue| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of |UnicodePropertyName| is not identical to a List of Unicode code points that is a Unicode property name or property alias listed in the &ldquo;Property name and aliases&rdquo; column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
+          </li>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of |UnicodePropertyValue| is not identical to a List of Unicode code points that is a value or value alias for the Unicode property or property alias given by SourceText of |UnicodePropertyName| listed in the &ldquo;Property value and aliases&rdquo; column of the corresponding tables <emu-xref href="#table-unicode-general-category-values"></emu-xref> or <emu-xref href="#table-unicode-script-values"></emu-xref>.
+          </li>
+        </ul>
+        <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of |LoneUnicodePropertyNameOrValue| is not identical to a List of Unicode code points that is a Unicode general category or general category alias listed in the &ldquo;Property value and aliases&rdquo; column of <emu-xref href="#table-unicode-general-category-values"></emu-xref>, nor a binary property or binary property alias listed in the &ldquo;Property name and aliases&rdquo; column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
+          </li>
+        </ul>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-pattern-semantics">
+      <h1>Pattern Semantics</h1>
+
+      <emu-clause id="sec-notation">
+        <h1>Notation</h1>
+        <p>The descriptions below use the following aliases:</p>
+        <ul>
+          <li>
+            _Input_ is a List whose elements are the characters of the String being matched by the regular expression pattern. Each character is either a code unit or a code point, depending upon the kind of pattern involved. The notation _Input_[_n_] means the _n_<sup>th</sup> character of _Input_, where _n_ can range between 0 (inclusive) and _InputLength_ (exclusive).
+          </li>
+          <li>
+            _InputLength_ is the number of characters in _Input_.
+          </li>
+          <li>
+            _NcapturingParens_ is CountLeftCapturingParensWithin(the pattern).
+          </li>
+          <li>
+            _DotAll_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"s"* and otherwise is *false*.
+          </li>
+          <li>
+            _IgnoreCase_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"i"* and otherwise is *false*.
+          </li>
+          <li>
+            _Multiline_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"m"* and otherwise is *false*.
+          </li>
+          <li>
+            _Unicode_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"u"* and otherwise is *false*.
+          </li>
+          <li oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
+            _WordCharacters_ is the mathematical set that is the union of all sixty-three characters in *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"* (letters, numbers, and U+005F (LOW LINE) in the Unicode Basic Latin block) and all characters _c_ for which _c_ is not in that set but Canonicalize(_c_) is. _WordCharacters_ cannot contain more than sixty-three characters unless _Unicode_ and _IgnoreCase_ are both *true*.
+          </li>
+        </ul>
+        <p>Furthermore, the descriptions below use the following internal data structures:</p>
+        <ul>
+          <li>
+            A <em>CharSet</em> is a mathematical set of characters. When the _Unicode_ flag is *true*, &ldquo;all characters&rdquo; means the CharSet containing all code point values; otherwise &ldquo;all characters&rdquo; means the CharSet containing all code unit values.
+          </li>
+          <li>
+            A <dfn variants="Ranges">Range</dfn> is an ordered pair (_startIndex_, _endIndex_) that represents the range of characters included in a capture, where _startIndex_ is an integer representing the start index (inclusive) of the range within _Input_, and _endIndex_ is an integer representing the end index (exclusive) of the range within _Input_. For any Range, these indices must satisfy the invariant that _startIndex_ &le; _endIndex_.
+          </li>
+          <li>
+            A <em>State</em> is an ordered pair (_endIndex_, _captures_) where _endIndex_ is an integer and _captures_ is a List of _NcapturingParens_ values. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a Range representing the range of characters captured by the _n_<sup>th</sup> set of capturing parentheses, or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
+          </li>
+          <li>
+            A <em>MatchResult</em> is either a State<del> or</del><ins>,</ins> the special token ~failure~ that indicates that the match failed<ins>, or the special token ~failure-atomic~ that indicates that the match failed and no backtracking should occur.</ins>.
+          </li>
+          <li>
+            A <em>Continuation</em> is an Abstract Closure that takes one State argument and returns a MatchResult result. The Continuation attempts to match the remaining portion (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. If the match succeeds, the Continuation returns the final State that it reached; if the match fails, the Continuation returns ~failure~.
+          </li>
+          <li>
+            A <em>Matcher</em> is an Abstract Closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
+          </li>
+        </ul>
+      </emu-clause>
+
+      <emu-clause id="sec-compilesubpattern" type="sdo" oldids="sec-disjunction,sec-alternative,sec-term">
+        <h1>
+          Runtime Semantics: CompileSubpattern (
+            _direction_: ~forward~ or ~backward~,
+          ): a Matcher
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-compilesubpattern-annexb"></emu-xref>.</p>
+        </emu-note>
+
+        <!-- Disjunction -->
+        <emu-grammar>Disjunction :: Alternative `|` Disjunction</emu-grammar>
+        <emu-alg>
+          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
+          1. Let _m2_ be CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _r_ be <del>_m1_(_x_, _c_)</del><ins>UpdateFailure(_m1_(_x_, _c_), ~failure~)</ins>.
+            1. If _r_ is not ~failure~, return _r_.
+            1. Return <del>_m2_(_x_, _c_)</del><ins>UpdateFailure(_m2_(_x_, _c_), ~failure~)</ins>.
+        </emu-alg>
+        <emu-note>
+          <p>The `|` regular expression operator separates two alternatives. The pattern first tries to match the left |Alternative| (followed by the sequel of the regular expression); if it fails, it tries to match the right |Disjunction| (followed by the sequel of the regular expression). If the left |Alternative|, the right |Disjunction|, and the sequel all have choice points, all choices in the sequel are tried before moving on to the next choice in the left |Alternative|. If choices in the left |Alternative| are exhausted, the right |Disjunction| is tried instead of the left |Alternative|. Any capturing parentheses inside a portion of the pattern skipped by `|` produce *undefined* values instead of Strings. Thus, for example,</p>
+          <pre><code class="javascript">/a|ab/.exec("abc")</code></pre>
+          <p>returns the result *"a"* and not *"ab"*. Moreover,</p>
+          <pre><code class="javascript">/((a)|(ab))((c)|(bc))/.exec("abc")</code></pre>
+          <p>returns the array</p>
+          <pre><code class="javascript">["abc", "a", "a", undefined, "bc", undefined, "bc"]</code></pre>
+          <p>and not</p>
+          <pre><code class="javascript">["abc", "ab", undefined, "ab", "c", "c", undefined]</code></pre>
+          <p>The order in which the two alternatives are tried is independent of the value of _direction_.</p>
+        </emu-note>
+
+        <!-- Alternative -->
+        <emu-grammar>Alternative :: [empty]</emu-grammar>
+        <emu-alg>
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Return _c_(_x_).
+        </emu-alg>
+        <emu-grammar>Alternative :: Alternative Term</emu-grammar>
+        <emu-alg>
+          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
+          1. Let _m2_ be CompileSubpattern of |Term| with argument _direction_.
+          1. <ins>If |Alternative| is an instance of the production <emu-grammar>Alternative :: [empty]</emu-grammar>, let _empty_ be *true*.</ins>
+          1. <ins>Else, let _empty_ be *false*.</ins>
+          1. If _direction_ is ~forward~, then
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_<del> and</del><ins>,</ins> _m2_<ins>, and _empty_</ins> and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _d_ be a new Continuation with parameters (_y_) that captures _c_<del> and</del><ins>,</ins> _m2_<ins>, and _empty_</ins> and performs the following steps when called:
+                1. Assert: _y_ is a State.
+                1. <del>Return _m2_(_y_, _c_).</del>
+                1. <ins>Let _r_ be _m2_(_y_, _c_).</ins>
+                1. <ins>If _empty_ is *true*, return _r_.</ins>
+                1. <ins>Return UpdateFailure(_r_, ~failure~).</ins>
+              1. Return _m1_(_x_, _d_).
+          1. Else,
+            1. Assert: _direction_ is ~backward~.
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _d_ be a new Continuation with parameters (_y_) that captures _c_ and _m1_ and performs the following steps when called:
+                1. Assert: _y_ is a State.
+                1. Return <del>_m1_(_y_, _c_)</del><ins>UpdateFailure(_m1_(_y_, _c_), ~failure~)</ins>.
+              1. Return <del>_m2_(_x_, _d_)</del><ins>UpdateFailure(_m2_(_x_, _d_), ~failure~)</ins>.
+        </emu-alg>
+        <emu-note>
+          <p>Consecutive |Term|s try to simultaneously match consecutive portions of _Input_. When _direction_ is ~forward~, if the left |Alternative|, the right |Term|, and the sequel of the regular expression all have choice points, all choices in the sequel are tried before moving on to the next choice in the right |Term|, and all choices in the right |Term| are tried before moving on to the next choice in the left |Alternative|. When _direction_ is ~backward~, the evaluation order of |Alternative| and |Term| are reversed.</p>
+        </emu-note>
+
+        <!-- Term -->
+        <emu-grammar>Term :: Assertion</emu-grammar>
+        <emu-alg>
+          1. Return CompileAssertion of |Assertion|.
+        </emu-alg>
+        <emu-note>
+          <p>The resulting Matcher is independent of _direction_.</p>
+        </emu-note>
+        <emu-grammar>Term :: Atom</emu-grammar>
+        <emu-alg>
+          1. Return CompileAtom of |Atom| with argument _direction_.
+        </emu-alg>
+        <emu-grammar>Term :: Atom Quantifier</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileAtom of |Atom| with argument _direction_.
+          1. Let _q_ be CompileQuantifier of |Quantifier|.
+          1. Assert: _q_.[[Min]] &le; _q_.[[Max]].
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Term|).
+          1. Let _parenCount_ be CountLeftCapturingParensWithin(|Atom|).
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_, _q_, _parenIndex_, and _parenCount_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. <ins>If _q_.[[Atomic]] is *true*, then</ins>
+              1. <ins>Let _d_ be a new Continuation with parameters (_y_) that performs the following steps when called:</ins>
+                1. <ins>Assert: _y_ is a State.</ins>
+                1. <ins>Return _y_.</ins>
+              1. <ins>Let _r_ be UpdateFailure(RepeatMatcher(_m_, _q_.[[Min]], _q_.[[Max]], *true*, _x_, _d_, _parenIndex_, _parenCount_), ~failure~).</ins>
+              1. <ins>If _r_ is ~failure~, return ~failure-atomic~.</ins>
+              1. <ins>Return UpdateFailure(_c_(_r_), ~failure-atomic~).</ins>
+            1. Return RepeatMatcher(_m_, _q_.[[Min]], _q_.[[Max]], _q_.[[Greedy]], _x_, _c_, _parenIndex_, _parenCount_).
+        </emu-alg>
+
+        <emu-clause id="sec-runtime-semantics-repeatmatcher-abstract-operation" type="abstract operation">
+          <h1>
+            RepeatMatcher (
+              _m_: a Matcher,
+              _min_: a non-negative integer,
+              _max_: a non-negative integer or +&infin;,
+              _greedy_: a Boolean,
+              _x_: a State,
+              _c_: a Continuation,
+              _parenIndex_: a non-negative integer,
+              _parenCount_: a non-negative integer,
+            ): a MatchResult
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _max_ = 0, return _c_(_x_).
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures _m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, and _parenCount_ and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. [id="step-repeatmatcher-done"] If _min_ = 0 and _y_'s _endIndex_ = _x_'s _endIndex_, return ~failure~.
+              1. If _min_ = 0, let _min2_ be 0; otherwise let _min2_ be _min_ - 1.
+              1. If _max_ is +&infin;, let _max2_ be +&infin;; otherwise let _max2_ be _max_ - 1.
+              1. Return RepeatMatcher(_m_, _min2_, _max2_, _greedy_, _y_, _c_, _parenIndex_, _parenCount_).
+            1. Let _cap_ be a copy of _x_'s _captures_ List.
+            1. [id="step-repeatmatcher-clear-captures"] For each integer _k_ such that _parenIndex_ &lt; _k_ and _k_ &le; _parenIndex_ + _parenCount_, set _cap_[_k_] to *undefined*.
+            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _xr_ be the State (_e_, _cap_).
+            1. If _min_ &ne; 0, return _m_(_xr_, _d_).
+            1. If _greedy_ is *false*, then
+              1. Let _z_ be <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+              1. If _z_ is not ~failure~, return _z_.
+              1. Return <del>_m_(_xr_, _d_)</del><ins>UpdateFailure(_m_(_xr_, _d_), ~failure~)</ins>.
+            1. Let _z_ be <del>_m_(_xr_, _d_)</del><ins>UpdateFailure(_m_(_xr_, _d_), ~failure~)</ins>.
+            1. If _z_ is not ~failure~, return _z_.
+            1. Return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+          </emu-alg>
+          <emu-note>
+            <p>An |Atom| followed by a |Quantifier| is repeated the number of times specified by the |Quantifier|. A |Quantifier| can be non-greedy, in which case the |Atom| pattern is repeated as few times as possible while still matching the sequel, or it can be greedy, in which case the |Atom| pattern is repeated as many times as possible while still matching the sequel. The |Atom| pattern is repeated rather than the input character sequence that it matches, so different repetitions of the |Atom| can match different input substrings.</p>
+          </emu-note>
+          <emu-note>
+            <p>If the |Atom| and the sequel of the regular expression all have choice points, the |Atom| is first matched as many (or as few, if non-greedy) times as possible. All choices in the sequel are tried before moving on to the next choice in the last repetition of |Atom|. All choices in the last (n<sup>th</sup>) repetition of |Atom| are tried before moving on to the next choice in the next-to-last (n - 1)<sup>st</sup> repetition of |Atom|; at which point it may turn out that more or fewer repetitions of |Atom| are now possible; these are exhausted (again, starting with either as few or as many as possible) before moving on to the next choice in the (n - 1)<sup>st</sup> repetition of |Atom| and so on.</p>
+            <p>Compare</p>
+            <pre><code class="javascript">/a[a-z]{2,4}/.exec("abcdefghi")</code></pre>
+            <p>which returns *"abcde"* with</p>
+            <pre><code class="javascript">/a[a-z]{2,4}?/.exec("abcdefghi")</code></pre>
+            <p>which returns *"abc"*.</p>
+            <p>Consider also</p>
+            <pre><code class="javascript">/(aa|aabaac|ba|b|c)*/.exec("aabaac")</code></pre>
+            <p>which, by the choice point ordering above, returns the array</p>
+            <pre><code class="javascript">["aaba", "ba"]</code></pre>
+            <p>and not any of:</p>
+            <pre><code class="javascript">
+              ["aabaac", "aabaac"]
+              ["aabaac", "c"]
+            </code></pre>
+            <p>The above ordering of choice points can be used to write a regular expression that calculates the greatest common divisor of two numbers (represented in unary notation). The following example calculates the gcd of 10 and 15:</p>
+            <pre><code class="javascript">"aaaaaaaaaa,aaaaaaaaaaaaaaa".replace(/^(a+)\1*,\1+$/, "$1")</code></pre>
+            <p>which returns the gcd in unary notation *"aaaaa"*.</p>
+          </emu-note>
+          <emu-note>
+            <p>Step <emu-xref href="#step-repeatmatcher-clear-captures"></emu-xref> of the RepeatMatcher clears |Atom|'s captures each time |Atom| is repeated. We can see its behaviour in the regular expression</p>
+            <pre><code class="javascript">/(z)((a+)?(b+)?(c))*/.exec("zaacbbbcac")</code></pre>
+            <p>which returns the array</p>
+            <pre><code class="javascript">["zaacbbbcac", "z", "ac", "a", undefined, "c"]</code></pre>
+            <p>and not</p>
+            <pre><code class="javascript">["zaacbbbcac", "z", "ac", "a", "bbb", "c"]</code></pre>
+            <p>because each iteration of the outermost `*` clears all captured Strings contained in the quantified |Atom|, which in this case includes capture Strings numbered 2, 3, 4, and 5.</p>
+          </emu-note>
+          <emu-note>
+            <p>Step <emu-xref href="#step-repeatmatcher-done"></emu-xref> of the RepeatMatcher states that once the minimum number of repetitions has been satisfied, any more expansions of |Atom| that match the empty character sequence are not considered for further repetitions. This prevents the regular expression engine from falling into an infinite loop on patterns such as:</p>
+            <pre><code class="javascript">/(a*)*/.exec("b")</code></pre>
+            <p>or the slightly more complicated:</p>
+            <pre><code class="javascript">/(a*)b\1+/.exec("baaaac")</code></pre>
+            <p>which returns the array</p>
+            <pre><code class="javascript">["b", ""]</code></pre>
+          </emu-note>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-compileassertion" type="sdo" oldids="sec-assertion">
+        <h1>Runtime Semantics: CompileAssertion ( ): a Matcher</h1>
+        <dl class="header">
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-compileassertion-annexb"></emu-xref>.</p>
+        </emu-note>
+        <emu-grammar>Assertion :: `^`</emu-grammar>
+        <emu-alg>
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _e_ be _x_'s _endIndex_.
+            1. If _e_ = 0, or if _Multiline_ is *true* and the character _Input_[_e_ - 1] is one of |LineTerminator|, then
+              1. Return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+            1. Return ~failure~.
+        </emu-alg>
+        <emu-note>
+          <p>Even when the `y` flag is used with a pattern, `^` always matches only at the beginning of _Input_, or (if _Multiline_ is *true*) at the beginning of a line.</p>
+        </emu-note>
+        <emu-grammar>Assertion :: `$`</emu-grammar>
+        <emu-alg>
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _e_ be _x_'s _endIndex_.
+            1. If _e_ = _InputLength_, or if _Multiline_ is *true* and the character _Input_[_e_] is one of |LineTerminator|, then
+              1. Return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+            1. Return ~failure~.
+        </emu-alg>
+        <emu-grammar>Assertion :: `\` `b`</emu-grammar>
+        <emu-alg>
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _a_ be IsWordChar(_e_ - 1).
+            1. Let _b_ be IsWordChar(_e_).
+            1. If _a_ is *true* and _b_ is *false*, or if _a_ is *false* and _b_ is *true*, return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+            1. Return ~failure~.
+        </emu-alg>
+        <emu-grammar>Assertion :: `\` `B`</emu-grammar>
+        <emu-alg>
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _a_ be IsWordChar(_e_ - 1).
+            1. Let _b_ be IsWordChar(_e_).
+            1. If _a_ is *true* and _b_ is *true*, or if _a_ is *false* and _b_ is *false*, return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+            1. Return ~failure~.
+        </emu-alg>
+        <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~forward~.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
+            1. Let _r_ be <del>_m_(_x_, _d_)</del><ins>UpdateFailure(_m_(_x_, _d_), ~failure~)</ins>.
+            1. If _r_ is ~failure~, return ~failure~.
+            1. Let _y_ be _r_'s State.
+            1. Let _cap_ be _y_'s _captures_ List.
+            1. Let _xe_ be _x_'s _endIndex_.
+            1. Let _z_ be the State (_xe_, _cap_).
+            1. Return <del>_c_(_z_)</del><ins>UpdateFailure(_c_(_z_), ~failure~)</ins>.
+        </emu-alg>
+        <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~forward~.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
+            1. Let _r_ be <del>_m_(_x_, _d_)</del><ins>UpdateFailure(_m_(_x_, _d_), ~failure~)</ins>.
+            1. If _r_ is not ~failure~, return ~failure~.
+            1. Return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+        </emu-alg>
+        <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~backward~.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
+            1. Let _r_ be <del>_m_(_x_, _d_)</del><ins>UpdateFailure(_m_(_x_, _d_), ~failure~)</ins>.
+            1. If _r_ is ~failure~, return ~failure~.
+            1. Let _y_ be _r_'s State.
+            1. Let _cap_ be _y_'s _captures_ List.
+            1. Let _xe_ be _x_'s _endIndex_.
+            1. Let _z_ be the State (_xe_, _cap_).
+            1. Return <del>_c_(_z_)</del><ins>UpdateFailure(_c_(_z_), ~failure~)</ins>.
+        </emu-alg>
+        <emu-grammar>Assertion :: `(` `?` `&lt;!` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~backward~.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
+            1. Let _r_ be <del>_m_(_x_, _d_)</del><ins>UpdateFailure(_m_(_x_, _d_), ~failure~)</ins>.
+            1. If _r_ is not ~failure~, return ~failure~.
+            1. Return <del>_c_(_x_)</del><ins>UpdateFailure(_c_(_x_), ~failure~)</ins>.
+        </emu-alg>
+
+        <emu-clause id="sec-runtime-semantics-iswordchar-abstract-operation" type="abstract operation">
+          <h1>
+            IsWordChar (
+              _e_: an integer,
+            ): a Boolean
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _e_ = -1 or _e_ is _InputLength_, return *false*.
+            1. Let _c_ be the character _Input_[_e_].
+            1. If _c_ is in _WordCharacters_, return *true*.
+            1. Return *false*.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-compilequantifier" type="sdo" oldids="sec-quantifier">
+        <h1>Runtime Semantics: CompileQuantifier ( ): a Record with fields [[Min]] (a non-negative integer), [[Max]] (a non-negative integer or +&infin;), [[Greedy]] (a Boolean), and <ins>[[Atomic]]</ins> (a Boolean)</h1>
+        <dl class="header">
+        </dl>
+        <emu-grammar>Quantifier :: QuantifierPrefix</emu-grammar>
+        <emu-alg>
+          1. Let _qp_ be CompileQuantifierPrefix of |QuantifierPrefix|.
+          1. Return the Record { [[Min]]: _qp_.[[Min]], [[Max]]: _qp_.[[Max]], [[Greedy]]: *true*<ins>, [[Atomic]]: *false*</ins> }.
+        </emu-alg>
+        <emu-grammar>Quantifier :: QuantifierPrefix `?`</emu-grammar>
+        <emu-alg>
+          1. Let _qp_ be CompileQuantifierPrefix of |QuantifierPrefix|.
+          1. Return the Record { [[Min]]: _qp_.[[Min]], [[Max]]: _qp_.[[Max]], [[Greedy]]: *false*<ins>, [[Atomic]]: *false*</ins> }.
+        </emu-alg>
+        <ins class="block">
+        <emu-grammar>Quantifier :: QuantifierPrefix `+`</emu-grammar>
+        <emu-alg>
+          1. Let _qp_ be CompileQuantifierPrefix of |QuantifierPrefix|.
+          1. Return the Record { [[Min]]: _qp_.[[Min]], [[Max]]: _qp_.[[Max]], [[Greedy]]: *true*, [[Atomic]]: *true* }.
+        </emu-alg>
+        </ins>
+      </emu-clause>
+
+      <emu-clause id="sec-compileatom" type="sdo" oldids="sec-atom,sec-atomescape,sec-characterescape,sec-decimalescape">
+        <h1>
+          Runtime Semantics: CompileAtom (
+            _direction_: ~forward~ or ~backward~,
+          ): a Matcher
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-compileatom-annexb"></emu-xref>.</p>
+        </emu-note>
+
+        <!-- Atom -->
+        <emu-grammar>Atom :: PatternCharacter</emu-grammar>
+        <emu-alg>
+          1. Let _ch_ be the character matched by |PatternCharacter|.
+          1. Let _A_ be a one-element CharSet containing the character _ch_.
+          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <emu-grammar>Atom :: `.`</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be the CharSet of all characters.
+          1. If _DotAll_ is not *true*, then
+            1. Remove from _A_ all characters corresponding to a code point on the right-hand side of the |LineTerminator| production.
+          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <emu-grammar>Atom :: CharacterClass</emu-grammar>
+        <emu-alg>
+          1. Let _cc_ be CompileCharacterClass of |CharacterClass|.
+          1. Return CharacterSetMatcher(_cc_.[[CharSet]], _cc_.[[Invert]], _direction_).
+        </emu-alg>
+        <emu-grammar>Atom :: `(` GroupSpecifier? Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Atom|).
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures _x_, _c_, _direction_, and _parenIndex_ and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Let _cap_ be a copy of _y_'s _captures_ List.
+              1. Let _xe_ be _x_'s _endIndex_.
+              1. Let _ye_ be _y_'s _endIndex_.
+              1. If _direction_ is ~forward~, then
+                1. Assert: _xe_ &le; _ye_.
+                1. Let _r_ be the Range (_xe_, _ye_).
+              1. Else,
+                1. Assert: _direction_ is ~backward~.
+                1. Assert: _ye_ &le; _xe_.
+                1. Let _r_ be the Range (_ye_, _xe_).
+              1. Set _cap_[_parenIndex_ + 1] to _r_.
+              1. Let _z_ be the State (_ye_, _cap_).
+              1. Return _c_(_z_).
+            1. Return _m_(_x_, _d_).
+        </emu-alg>
+        <emu-grammar>Atom :: `(` `?` `:` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Return CompileSubpattern of |Disjunction| with argument _direction_.
+        </emu-alg>
+
+        <ins class="block">
+        <emu-grammar>Atom :: `(` `?` `>` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
+            1. Let _r_ be UpdateFailure(_m_(_x_, _d_), ~failure~).
+            1. If _r_ is ~failure~, return ~failure-atomic~.
+            1. Return UpdateFailure(_c_(_r_), ~failure-atomic~).
+        </emu-alg>
+        </ins>
+
+        <!-- AtomEscape -->
+        <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
+        <emu-alg>
+          1. Let _n_ be the CapturingGroupNumber of |DecimalEscape|.
+          1. Assert: _n_ &le; _NcapturingParens_.
+          1. Return BackreferenceMatcher(_n_, _direction_).
+        </emu-alg>
+        <emu-note>
+          <p>An escape sequence of the form `\\` followed by a non-zero decimal number _n_ matches the result of the _n_<sup>th</sup> set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_<sup>th</sup> one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
+        </emu-note>
+        <emu-grammar>AtomEscape :: CharacterEscape</emu-grammar>
+        <emu-alg>
+          1. Let _cv_ be the CharacterValue of |CharacterEscape|.
+          1. Let _ch_ be the character whose character value is _cv_.
+          1. Let _A_ be a one-element CharSet containing the character _ch_.
+          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |CharacterClassEscape|.
+          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
+        <emu-alg>
+          1. Let _matchingGroupSpecifiers_ be GroupSpecifiersThatMatch(|GroupName|).
+          1. Assert: _matchingGroupSpecifiers_ contains a single |GroupSpecifier|.
+          1. Let _groupSpecifier_ be the sole element of _matchingGroupSpecifiers_.
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(_groupSpecifier_).
+          1. Return BackreferenceMatcher(_parenIndex_, _direction_).
+        </emu-alg>
+
+        <emu-clause id="sec-runtime-semantics-charactersetmatcher-abstract-operation" type="abstract operation">
+          <h1>
+            CharacterSetMatcher (
+              _A_: a CharSet,
+              _invert_: a Boolean,
+              _direction_: ~forward~ or ~backward~,
+            ): a Matcher
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _A_, _invert_, and _direction_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _e_ be _x_'s _endIndex_.
+              1. If _direction_ is ~forward~, let _f_ be _e_ + 1.
+              1. Else, let _f_ be _e_ - 1.
+              1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
+              1. Let _index_ be min(_e_, _f_).
+              1. Let _ch_ be the character _Input_[_index_].
+              1. Let _cc_ be Canonicalize(_ch_).
+              1. If there exists a member _a_ of _A_ such that Canonicalize(_a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
+              1. If _invert_ is *false* and _found_ is *false*, return ~failure~.
+              1. If _invert_ is *true* and _found_ is *true*, return ~failure~.
+              1. Let _cap_ be _x_'s _captures_ List.
+              1. Let _y_ be the State (_f_, _cap_).
+              1. Return <del>_c_(_y_)</del><ins>UpdateFailure(_c_(_y_), ~failure~)</ins>.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-backreference-matcher" type="abstract operation">
+          <h1>
+            BackreferenceMatcher (
+              _n_: a positive integer,
+              _direction_: ~forward~ or ~backward~,
+            ): a Matcher
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _n_ &ge; 1.
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _n_ and _direction_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _cap_ be _x_'s _captures_ List.
+              1. Let _r_ be _cap_[_n_].
+              1. If _r_ is *undefined*, return _c_(_x_).
+              1. Let _e_ be _x_'s _endIndex_.
+              1. Let _rs_ be _r_'s _startIndex_.
+              1. Let _re_ be _r_'s _endIndex_.
+              1. Let _len_ be _re_ - _rs_.
+              1. If _direction_ is ~forward~, let _f_ be _e_ + _len_.
+              1. Else, let _f_ be _e_ - _len_.
+              1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
+              1. Let _g_ be min(_e_, _f_).
+              1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_Input_[_rs_ + _i_]) is not the same character value as Canonicalize(_Input_[_g_ + _i_]), return ~failure~.
+              1. Let _y_ be the State (_f_, _cap_).
+              1. Return <del>_c_(_y_)</del><ins>UpdateFailure(_c_(_y_), ~failure~)</ins>.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
+      <ins class="block">
+      <emu-clause id="sec-updatefailure" type="abstract operation">
+        <h1>
+          UpdateFailure (
+            _result_: a MatchResult,
+            _failure_: either ~failure~ or ~failure-atomic~
+          ): a MatchResult
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _result_ is ~failure~, return _failure_.
+          1. If _result_ is ~failure-atomic~, return _failure_.
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+      </ins>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-regexp-prototype-object">
+      <h1>Properties of the RegExp Prototype Object</h1>
+
+      <emu-clause id="sec-regexp.prototype.exec">
+        <h1>RegExp.prototype.exec ( _string_ )</h1>
+
+        <emu-clause id="sec-regexpbuiltinexec" type="abstract operation">
+          <h1>
+            RegExpBuiltinExec (
+              _R_: an initialized RegExp instance,
+              _S_: a String,
+            ): either a normal completion containing either an Array exotic object or *null*, or a throw completion
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _length_ be the length of _S_.
+            1. Let _lastIndex_ be ℝ(? ToLength(? Get(_R_, *"lastIndex"*))).
+            1. Let _flags_ be _R_.[[OriginalFlags]].
+            1. If _flags_ contains *"g"*, let _global_ be *true*; else let _global_ be *false*.
+            1. If _flags_ contains *"y"*, let _sticky_ be *true*; else let _sticky_ be *false*.
+            1. If _flags_ contains *"d"*, let _hasIndices_ be *true*; else let _hasIndices_ be *false*.
+            1. If _global_ is *false* and _sticky_ is *false*, set _lastIndex_ to 0.
+            1. Let _matcher_ be _R_.[[RegExpMatcher]].
+            1. If _flags_ contains *"u"*, let _fullUnicode_ be *true*; else let _fullUnicode_ be *false*.
+            1. Let _matchSucceeded_ be *false*.
+            1. If _fullUnicode_ is *true*, let _input_ be StringToCodePoints(_S_). Otherwise, let _input_ be a List whose elements are the code units that are the elements of _S_.
+            1. NOTE: Each element of _input_ is considered to be a character.
+            1. Repeat, while _matchSucceeded_ is *false*,
+              1. If _lastIndex_ &gt; _length_, then
+                1. If _global_ is *true* or _sticky_ is *true*, then
+                  1. Perform ? Set(_R_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
+                1. Return *null*.
+              1. Let _inputIndex_ be the index into _input_ of the character that was obtained from element _lastIndex_ of _S_.
+              1. Let _r_ be _matcher_(_input_, _inputIndex_).
+              1. If _r_ is ~failure~, then
+                1. If _sticky_ is *true*, then
+                  1. Perform ? Set(_R_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
+                  1. Return *null*.
+                1. Set _lastIndex_ to AdvanceStringIndex(_S_, _lastIndex_, _fullUnicode_).
+              1. <ins>Else, if _r_ is ~failure-atomic~, then</ins>
+                1. <ins>Perform ? Set(_R_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).</ins>
+                1. <ins>Return *null*.</ins>
+              1. Else,
+                1. Assert: _r_ is a State.
+                1. Set _matchSucceeded_ to *true*.
+            1. Let _e_ be _r_'s _endIndex_ value.
+            1. If _fullUnicode_ is *true*, set _e_ to GetStringIndex(_S_, _e_).
+            1. If _global_ is *true* or _sticky_ is *true*, then
+              1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_e_), *true*).
+            1. Let _n_ be the number of elements in _r_'s _captures_ List. (This is the same value as <emu-xref href="#sec-notation"></emu-xref>'s _NcapturingParens_.)
+            1. Assert: _n_ &lt; 2<sup>32</sup> - 1.
+            1. Let _A_ be ! ArrayCreate(_n_ + 1).
+            1. Assert: The mathematical value of _A_'s *"length"* property is _n_ + 1.
+            1. Perform ! CreateDataPropertyOrThrow(_A_, *"index"*, 𝔽(_lastIndex_)).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, *"input"*, _S_).
+            1. Let _match_ be the Match Record { [[StartIndex]]: _lastIndex_, [[EndIndex]]: _e_ }.
+            1. Let _indices_ be a new empty List.
+            1. Let _groupNames_ be a new empty List.
+            1. Append _match_ to _indices_.
+            1. Let _matchedSubstr_ be GetMatchString(_S_, _match_).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, *"0"*, _matchedSubstr_).
+            1. If _R_ contains any |GroupName|, then
+              1. Let _groups_ be OrdinaryObjectCreate(*null*).
+              1. Let _hasGroups_ be *true*.
+            1. Else,
+              1. Let _groups_ be *undefined*.
+              1. Let _hasGroups_ be *false*.
+            1. Perform ! CreateDataPropertyOrThrow(_A_, *"groups"*, _groups_).
+            1. For each integer _i_ such that _i_ &ge; 1 and _i_ &le; _n_, in ascending order, do
+              1. Let _captureI_ be _i_<sup>th</sup> element of _r_'s _captures_ List.
+              1. If _captureI_ is *undefined*, then
+                1. Let _capturedValue_ be *undefined*.
+                1. Append *undefined* to _indices_.
+              1. Else,
+                1. Let _captureStart_ be _captureI_'s _startIndex_.
+                1. Let _captureEnd_ be _captureI_'s _endIndex_.
+                1. If _fullUnicode_ is *true*, then
+                  1. Set _captureStart_ to GetStringIndex(_S_, _captureStart_).
+                  1. Set _captureEnd_ to GetStringIndex(_S_, _captureEnd_).
+                1. Let _capture_ be the Match Record { [[StartIndex]]: _captureStart_, [[EndIndex]]: _captureEnd_ }.
+                1. Let _capturedValue_ be GetMatchString(_S_, _capture_).
+                1. Append _capture_ to _indices_.
+              1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(𝔽(_i_)), _capturedValue_).
+              1. If the _i_<sup>th</sup> capture of _R_ was defined with a |GroupName|, then
+                1. Let _s_ be the CapturingGroupName of that |GroupName|.
+                1. Perform ! CreateDataPropertyOrThrow(_groups_, _s_, _capturedValue_).
+                1. Append _s_ to _groupNames_.
+              1. Else,
+                1. Append *undefined* to _groupNames_.
+            1. If _hasIndices_ is *true*, then
+              1. Let _indicesArray_ be MakeMatchIndicesIndexPairArray(_S_, _indices_, _groupNames_, _hasGroups_).
+              1. Perform ! CreateDataPropertyOrThrow(_A_, *"indices"*, _indicesArray_).
+            1. Return _A_.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
