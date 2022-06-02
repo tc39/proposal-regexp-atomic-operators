@@ -1,6 +1,29 @@
 <!--#region:intro-->
 # Regular Expression Atomic Operators for ECMAScript
 
+This proposal seeks to introduce syntax to ECMAScript regular expressions to control backtracking in certain scenarios
+by treating certain portions of a pattern as "atomic", where backtracking information specific to that portion of the
+pattern is discarded when it matches successfully.
+
+For example, currently the pattern `a(bc|b)c` will match both `"abcc"` and `"abc"`. In the case of `"abcc"`, we 
+match the term `a`, then the alternative `bc`, and finally the term `c`. In the case of `"abc"`, we match the
+term `a`, then the alternative `bc` (consuming the rest of the input), but fail to match the final term `c`. Since the
+rest of the match failed, we ***backtrack*** to the beginning of the disjunction `bc|b` and attempt the alternative. We then
+match the alternative `b`, and finally the term `c`.
+
+In some cases such backtracking is unwanted or is potentially catastrophic. To address such cases, we propose the 
+addition of Atomic Groups (`(?> Disjunction )`) and Possessive Quantifiers (`n*+`, `n++`, etc.). In an _Atomic Group_
+we discard backtracking information for the group when it matches successfully. If the rest of the pattern following
+the atomic group fails to match, we would no longer backtrack to the beginning of the group in an attempt to process
+any alternatives.
+
+In the case of `a(?>bc|b)c`, we would still match `"abcc"` but would no longer match `"abc"`. In the case of `"abc"`,
+we match the term `a`, then the alternative `bc`, but fail to match the term `c`. Since backtracking information for
+the disjunction `bc|b` was discarded upon the successful match of `bc`, we cannot attempt the alternative `b`. As a result,
+the match for `"abc"` fails.
+
+It is worth noting that lookaround operators (i.e., `(?=)`, `(?!)`, `(?<=)`, and `(?<!)`) are already atomic operations.
+
 <!--#endregion:intro-->
 
 <!--#region:status-->
@@ -57,22 +80,6 @@ additional information.
 <!--#region:syntax-->
 # Syntax
 
-## Possessive Quantifiers
-
-Possessive quantifiers are like normal (a.k.a. "greedy") quantifiers, but do not
-backtrack if the rest of the pattern to the right fails to match. Possessive
-quantifiers are often used as a performance tweak to avoid expensive backtracking
-in a complex pattern.
-
-- `*+` &mdash; Match zero or more instances of the preceding atom without backtracking.
-- `++` &mdash; Match one or more instances of the preceding atom without backtracking.
-- `?+` &mdash; Match zero or one instances of the preceding atom without backtracking.
-- `{n,}+` &mdash; Where _n_ is an integer. Matches the preceding atom at-least _n_ times without backtracking.
-- `{n,m}+` &mdash; Where _n_ and _m_ are integers, and _m_ >= _n_. Matches the preceding atom at-least _n_ times and at-most _m_ times without backtracking.
-
-> NOTE: This has no conflicts with existing syntax, as ECMAScript currently produces
-> an error for this syntax in both `u` and non-`u` modes.
-
 ## Atomic Groups
 
 An Atomic Group is a non-backtracking expression which is matched independent of
@@ -84,6 +91,31 @@ is often used to improve performance.
 
 > NOTE: This has no conflicts with existing syntax, as ECMAScript currently produces an
   error for this syntax in both `u` and non-`u` modes.
+
+## Possessive Quantifiers
+
+Possessive quantifiers are like normal (a.k.a. "greedy") quantifiers, but do not
+backtrack if the rest of the pattern to the right fails to match. Possessive
+quantifiers are often used as a performance tweak to avoid catastrophic backtracking.
+
+- `*+` &mdash; Match zero or more instances of the preceding atom without backtracking.
+- `++` &mdash; Match one or more instances of the preceding atom without backtracking.
+- `?+` &mdash; Match zero or one instances of the preceding atom without backtracking.
+- `{n,}+` &mdash; Where _n_ is an integer. Matches the preceding atom at-least _n_ times without backtracking.
+- `{n,m}+` &mdash; Where _n_ and _m_ are integers, and _m_ >= _n_. Matches the preceding atom at-least _n_ times and at-most _m_ times without backtracking.
+
+> NOTE: This has no conflicts with existing syntax, as ECMAScript currently produces
+> an error for this syntax in both `u` and non-`u` modes.
+
+Possessive quantifiers are syntactic sugar over `(?> Disjunction )`:
+
+- `atom*+` is equivalent to `(?>atom*)`
+- `atom++` is equivalent to `(?>atom+)`
+- `atom?+` is equivalent to `(?>atom?)`
+- `atom{n,}+` is equivalent to `(?>atom{n,})`
+- `atom{n,m}+` is equivalent to `(?>atom{n,m})`
+
+NOTE: There is no possessive equvilant for the quantifier `{n}`, since that operation is already atomic.
 
 <!--#endregion:syntax-->
 
