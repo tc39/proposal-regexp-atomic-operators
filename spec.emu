@@ -568,3 +568,98 @@ contributors: Ron Buckton, Ecma International
     </emu-clause>
   </emu-clause>
 </emu-clause>
+
+<emu-annex id="sec-additional-ecmascript-features-for-web-browsers" namespace="annexB" normative>
+  <h1>Additional ECMAScript Features for Web Browsers</h1>
+  <emu-annex id="sec-additional-syntax">
+    <h1>Additional Syntax</h1>
+    <emu-annex id="sec-regular-expressions-patterns">
+      <h1>Regular Expressions Patterns</h1>
+      <emu-grammar type="definition">
+        Term[UnicodeMode, N] ::
+          [+UnicodeMode] Assertion[+UnicodeMode, ?N]
+          [+UnicodeMode] Atom[+UnicodeMode, ?N] Quantifier
+          [+UnicodeMode] Atom[+UnicodeMode, ?N]
+          [~UnicodeMode] QuantifiableAssertion[?N] Quantifier
+          [~UnicodeMode] Assertion[~UnicodeMode, ?N]
+          [~UnicodeMode] ExtendedAtom[?N] Quantifier
+          [~UnicodeMode] ExtendedAtom[?N]
+
+        Assertion[UnicodeMode, N] ::
+          `^`
+          `$`
+          `\` `b`
+          `\` `B`
+          [+UnicodeMode] `(` `?` `=` Disjunction[+UnicodeMode, ?N] `)`
+          [+UnicodeMode] `(` `?` `!` Disjunction[+UnicodeMode, ?N] `)`
+          [~UnicodeMode] QuantifiableAssertion[?N]
+          `(` `?` `&lt;=` Disjunction[?UnicodeMode, ?N] `)`
+          `(` `?` `&lt;!` Disjunction[?UnicodeMode, ?N] `)`
+
+        QuantifiableAssertion[N] ::
+          `(` `?` `=` Disjunction[~UnicodeMode, ?N] `)`
+          `(` `?` `!` Disjunction[~UnicodeMode, ?N] `)`
+
+        ExtendedAtom[N] ::
+          `.`
+          `\` AtomEscape[~UnicodeMode, ?N]
+          `\` [lookahead == `c`]
+          CharacterClass[~UnicodeMode]
+          `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ?N] `)`
+          `(` `?` `:` Disjunction[~UnicodeMode, ?N] `)`
+          <ins>`(` `?` `>` Disjunction[~UnicodeMode, ?N] `)`</ins>
+          InvalidBracedQuantifier
+          ExtendedPatternCharacter
+
+        InvalidBracedQuantifier ::
+          `{` DecimalDigits[~Sep] `}`
+          `{` DecimalDigits[~Sep] `,` `}`
+          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
+
+        ExtendedPatternCharacter ::
+          SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `|`
+
+        AtomEscape[UnicodeMode, N] ::
+          [+UnicodeMode] DecimalEscape
+          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; CountLeftCapturingParensWithin(the |Pattern| containing |DecimalEscape|)]
+          CharacterClassEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode, ?N]
+          [+N] `k` GroupName[?UnicodeMode]
+
+        CharacterEscape[UnicodeMode, N] ::
+          ControlEscape
+          `c` ControlLetter
+          `0` [lookahead &notin; DecimalDigit]
+          HexEscapeSequence
+          RegExpUnicodeEscapeSequence[?UnicodeMode]
+          [~UnicodeMode] LegacyOctalEscapeSequence
+          IdentityEscape[?UnicodeMode, ?N]
+
+        IdentityEscape[UnicodeMode, N] ::
+          [+UnicodeMode] SyntaxCharacter
+          [+UnicodeMode] `/`
+          [~UnicodeMode] SourceCharacterIdentityEscape[?N]
+
+        SourceCharacterIdentityEscape[N] ::
+          [~N] SourceCharacter but not `c`
+          [+N] SourceCharacter but not one of `c` or `k`
+
+        ClassAtomNoDash[UnicodeMode, N] ::
+          SourceCharacter but not one of `\` or `]` or `-`
+          `\` ClassEscape[?UnicodeMode, ?N]
+          `\` [lookahead == `c`]
+
+        ClassEscape[UnicodeMode, N] ::
+          `b`
+          [+UnicodeMode] `-`
+          [~UnicodeMode] `c` ClassControlLetter
+          CharacterClassEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode, ?N]
+
+        ClassControlLetter ::
+          DecimalDigit
+          `_`
+      </emu-grammar>
+    </emu-annex>
+  </emu-annex>
+</emu-annex>
