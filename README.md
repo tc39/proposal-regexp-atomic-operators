@@ -29,7 +29,7 @@ It is worth noting that lookaround operators (i.e., `(?=)`, `(?!)`, `(?<=)`, and
 <!--#region:status-->
 ## Status
 
-**Stage:** 0  
+**Stage:** 1  
 **Champion:** Ron Buckton ([@rbuckton](https://github.com/rbuckton))  
 
 _For detailed status of this proposal see [TODO](#todo), below._  
@@ -101,6 +101,7 @@ quantifiers are often used as a performance tweak to avoid catastrophic backtrac
 - `*+` &mdash; Match zero or more instances of the preceding atom without backtracking.
 - `++` &mdash; Match one or more instances of the preceding atom without backtracking.
 - `?+` &mdash; Match zero or one instances of the preceding atom without backtracking.
+- `{n}+` &mdash; Where _n_ is an integer. Matches the preceding atom exactly _n_ times without backtracking.
 - `{n,}+` &mdash; Where _n_ is an integer. Matches the preceding atom at-least _n_ times without backtracking.
 - `{n,m}+` &mdash; Where _n_ and _m_ are integers, and _m_ >= _n_. Matches the preceding atom at-least _n_ times and at-most _m_ times without backtracking.
 
@@ -112,10 +113,9 @@ Possessive quantifiers are syntactic sugar over `(?> Disjunction )`:
 - `atom*+` is equivalent to `(?>atom*)`
 - `atom++` is equivalent to `(?>atom+)`
 - `atom?+` is equivalent to `(?>atom?)`
+- `atom{n}+` is equivalent to `(?>atom{n})`
 - `atom{n,}+` is equivalent to `(?>atom{n,})`
 - `atom{n,m}+` is equivalent to `(?>atom{n,m})`
-
-NOTE: There is no possessive equvilant for the quantifier `{n}`, since that operation is already atomic.
 
 <!--#endregion:syntax-->
 
