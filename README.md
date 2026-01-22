@@ -172,7 +172,9 @@ See https://github.com/rbuckton/proposal-regexp-x-mode for more information on t
 # History
 
 - October 28, 2021 &mdash; Proposed for Stage 1 ([slides](https://1drv.ms/p/s!AjgWTO11Fk-TkfoUE-yb6OHZGaPtvw?e=mJQWJ8))
-  - Outcome: Remained at Stage 0
+  - Outcome: [Remained at Stage 0](https://github.com/tc39/notes/blob/main/meetings/2021-10/oct-28.md#regexp-atomic-operations)
+- June 8, 2022 &mdash; Proposed for Stage 1 ([slides](https://1drv.ms/p/s!AjgWTO11Fk-Tkf5fz_Ayyt6gEMkBgQ?e=6eFHfI))
+  - Outcome: [Advanced to Stage 1](https://github.com/tc39/notes/blob/main/meetings/2022-06/jun-08.md#regex-atomic-operators)
 
 <!--#region:todo-->
 # TODO
